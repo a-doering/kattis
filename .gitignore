@@ -1,3 +1,7 @@
-#C++ 
+# C++ 
 *.exe
 *.o
+
+# Python env
+.venv/
+
