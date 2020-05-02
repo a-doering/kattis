@@ -1,3 +1,4 @@
+'''Functions to create a readme with information about solved kattis problems.'''
 import os
 import requests
 from bs4 import BeautifulSoup
@@ -25,17 +26,17 @@ def create_dict(dirs=['C++', 'Python'], verbose=False):
     dirs[:] = [os.path.join(cwd, dir) for dir in dirs]
 
     # Add local solutions
-    solutions = find_solutions(dirs, verbose)[:10]#TODO
+    solutions = find_solutions(dirs, verbose)
     my_dict = {}
     for path in solutions:
 
-        problem_id = os.path.splitext(os.path.basename(path))[0]
+        problem_id, language_suffix = os.path.splitext(os.path.basename(path))
         language = os.path.basename(os.path.dirname(path))
 
         if problem_id in my_dict:
-            my_dict[problem_id]['languages'].append(language)
+            my_dict[problem_id]['languages'][language] = language_suffix 
         else:
-            my_dict[problem_id] = {'languages': [language]}
+            my_dict[problem_id] = {'languages': {language:language_suffix}}
 
     # Fill in remote information
     url_base = 'https://open.kattis.com/problems/'
@@ -56,23 +57,16 @@ def url_exists(url):
     '''Check if urlexists on kattis'''
     return requests.get(url).status_code == 200
 
-
 # Check difficulty of problem
 def get_problem_info(problem_id):
-    ''''''
+    '''Get full name and difficulty of problem from kattis'''
     url_problem = 'https://open.kattis.com/problems/' + problem_id
     response = requests.get(url_problem)
-
     soup = BeautifulSoup(response.content, "html.parser")
-
-    # Can break here if the name is wrong, but will be checked in advance
 
     side_contents = soup.find(class_="sidebar-info").find_all(text=True)
     problem_id_side = side_contents[3].strip()
-    '''
-    print(problem_id)# + '#')
-    print(problem_id_side)# + '#')
-    '''
+
     if problem_id_side != problem_id:
         raise Exception("Sidebar name is not matching. Check name or indexing.")
         return 'Error_sidebar', 0
@@ -81,7 +75,6 @@ def get_problem_info(problem_id):
     problem_name = headline.find_all(text=True)[0]
 
     return problem_name, problem_difficulty
-
 
 # Create statistics from the locally saved solutions
 def create_local_stats():
@@ -94,7 +87,6 @@ def get_profile_stats(username):
     url_profile = 'https://open.kattis.com/users/' + username
 
     exists = url_exists(url_profile)
-
     if exists:
         # Get the data using BeautifulSoup
         response = requests.get(url_profile)
@@ -108,54 +100,85 @@ def get_profile_stats(username):
     else:
         return 0, 0
 
-
 # Create the readme in markdown
 def create_readme(username=None, verbose=False):
     '''Create the readme file with all the information'''
 
-
-    
     # Write to readme
     with open('readme.md', 'w') as f:
 
-
         # Description text
-        text_description = 'This repo contains my solutions to kattis problems. [Kattis](https://open.kattis.com/) is a website that offers many different programming problems.'
+        text_description = 'This repo contains my solutions to Kattis problems. [Kattis](https://open.kattis.com/) is a website that offers many different programming problems.'
+        url_profile_base = 'https://open.kattis.com/users/'
+        user_rank, user_score = get_profile_stats('stevenhalim')
+        text_description = text_description + ' I first started solving some Kattis problems when my professor [Steven Halim]({})(Rank {} with a score of {}) introduced it in his CS2040C class.'.format(url_profile_base + 'stevenhalim', user_rank, user_score)
+
         f.write('# Overview' + '\n')
-        f.write(text_description +'\n')
-        
-        # User statistics
+        f.write(text_description +'\n\n')
+        # User statistics online
         if username is not None:
             user_rank, user_score = get_profile_stats(username)
-            f.write('# User statistics (online)' + '\n')
-            f.write('Username|Rank|Score' + '\n')
+            f.write('# User statistics' + '\n')
+            f.write('Username|Rank|Score (online)' + '\n')
             f.write('---|---|---' + '\n')
-            url_profile = 'https://open.kattis.com/users/' + username
-            f.write('[' + username + '](' + url_profile +')|' + str(user_rank) + '|' + str(user_score) + '\n')
+            f.write('[' + username + '](' + url_profile_base + username +')|' + str(user_rank) + '|' + str(user_score) + '\n\n')
 
         # Create dictionary with data about the problems solved and stored locally
         my_dict = create_dict(verbose=verbose)
 
-        # Problems solved
-        f.write('# Problems solved' + '\n')
-        f.write('Problem|Languages|Difficulty' + '\n')
-        f.write('---|---|---' + '\n')
+        # User statistics local
+        score_local = 0
+        tracked_problems_local = 0
 
-        url_base = 'https://open.kattis.com/problems/'
+        # Flag whether section about unrecognised problems is needed
+        unrecognised_problems = False
 
         for p_id in my_dict:
             if my_dict[p_id]['exists']:
-                languages_string = ''
-                for count, lang in enumerate(my_dict[p_id]['languages'], 0):
-                    if count != 0:
-                        languages_string = languages_string + ', '
-                    languages_string = languages_string + '[' + lang + '][' + lang + '/' + p_id + ']' # TODO Get ending of the file and add it to be able to link
-                f.write('[' + my_dict[p_id]['problem_name'] + '](' + url_base + p_id +')|' + languages_string + '|' + str(my_dict[p_id]['problem_difficulty'])+ '\n')
+                score_local += my_dict[p_id]['problem_difficulty']
+                tracked_problems_local += 1
+            else:
+                unrecognised_problems = True
 
-        #         if my_dict[problem_id]['exists'] == True:   
+        if tracked_problems_local > 0:
+            f.write('# Local statistics' + '\n')
+            f.write('\# Tracked problems|Average difficulty|Score (local)|Score (online-local)' + '\n')
+            f.write('---|---|---|---' + '\n')
+            f.write(str(tracked_problems_local) + '|' + str(round(score_local/tracked_problems_local, 2)) + '|' + str(round(score_local,2)) + '|' + str(user_score-score_local) + '\n\n')            
 
+            # Problems solved
+            f.write('# Problems solved' + '\n')
+            f.write('Problem|Languages|Difficulty' + '\n')
+            f.write('---|---|---' + '\n')
+
+            url_kattis_base = 'https://open.kattis.com/problems/'
+            url_github_base = 'https://github.com/a-doering/kattis/tree/master/'
+
+            #for p_id in sorted(my_dict):# Sorted alphabetical by ID
+            # Sorted by problem difficulty
+            for p_id in sorted(my_dict, key=lambda k: my_dict[k]['problem_difficulty']):
+                if my_dict[p_id]['exists']:
+                    languages_string = ''
+                    for count, lang in enumerate(my_dict[p_id]['languages'], 0):
+                        if count != 0:
+                            languages_string = languages_string + ', '
+                        languages_string = languages_string + '[' + lang + '](' + url_github_base + lang + '/' + p_id  + my_dict[p_id]['languages'][lang] +')'
+                    f.write('[' + my_dict[p_id]['problem_name'] + '](' + url_kattis_base + p_id +')|' + languages_string + '|' + str(my_dict[p_id]['problem_difficulty'])+ '\n')
+            f.write('\n')
+
+        if unrecognised_problems:
         # Unrecognised problems
-    pass
+            f.write('# Problems not recognised by name' + '\n')
+            f.write('Problem|Languages' + '\n')
+            f.write('---|---' + '\n')
+            for p_id in my_dict:
+                if not my_dict[p_id]['exists']:
+                    languages_string=''
+                    for count, lang in enumerate(my_dict[p_id]['languages'], 0):
+                        if count != 0:
+                            languages_string = languages_string + ', '
+                        languages_string = languages_string + lang
+                    f.write(p_id + '|' + languages_string + '\n')
 
 if __name__ == "__main__":
     create_readme(username= 'a-doering', verbose=True)
