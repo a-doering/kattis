@@ -4,4 +4,7 @@
 
 # Python env
 .venv/
+__pycache__
 
+# Files not tracked
+Untracked/
