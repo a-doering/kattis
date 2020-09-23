@@ -111,14 +111,18 @@ def create_readme(username=None, verbose=False):
         text_description = 'This repo contains my solutions to Kattis problems. [Kattis](https://open.kattis.com/) is a website that offers many different programming problems.'
         url_profile_base = 'https://open.kattis.com/users/'
         user_rank, user_score = get_profile_stats('stevenhalim')
-        text_description = text_description + ' I first started solving some Kattis problems when my professor [Steven Halim]({})(Rank {} with a score of {}) introduced it in his CS2040C class.'.format(url_profile_base + 'stevenhalim', user_rank, user_score)
+        text_description = text_description + ' I first started solving some Kattis problems when my professor [Steven Halim]({}) (Rank {} with a score of {}) introduced it in his class CS2040C: Data Structures and Algorithms. These solutions were not created following good software engineering practices. They just had to be fast to implement and fast enough to solve the problem within the given time.'.format(url_profile_base + 'stevenhalim', user_rank, user_score)
 
-        f.write('# Overview' + '\n')
-        f.write(text_description +'\n\n')
+        f.write('# Kattis Problem Solutions' + '\n')
+        f.write(text_description + '\n\n')
+
+        f.write('## Display of solutions' + '\n')
+        f.write('To get a better overview of my solved problems and try some basic web scraping I created [this script](https://github.com/a-doering/kattis/blob/master/CreateRM.py). It gathers information on my local solutions, uses requests and Beautiful Soup to scrape information from Kattis and generates this readme.md file. ' + '\n\n')
+
         # User statistics online
         if username is not None:
             user_rank, user_score = get_profile_stats(username)
-            f.write('# User statistics' + '\n')
+            f.write('## User statistics' + '\n')
             f.write('Username|Rank|Score (online)' + '\n')
             f.write('---|---|---' + '\n')
             f.write('[' + username + '](' + url_profile_base + username +')|' + str(user_rank) + '|' + str(user_score) + '\n\n')
@@ -141,20 +145,20 @@ def create_readme(username=None, verbose=False):
                 unrecognised_problems = True
 
         if tracked_problems_local > 0:
-            f.write('# Local statistics' + '\n')
+            f.write('## Local statistics' + '\n')
             f.write('\# Tracked problems|Average difficulty|Score (local)|Score (online-local)' + '\n')
             f.write('---|---|---|---' + '\n')
             f.write(str(tracked_problems_local) + '|' + str(round(score_local/tracked_problems_local, 2)) + '|' + str(round(score_local,2)) + '|' + str(user_score-score_local) + '\n\n')            
 
             # Problems solved
-            f.write('# Problems solved' + '\n')
+            f.write('## Problems solved' + '\n')
             f.write('Problem|Languages|Difficulty' + '\n')
             f.write('---|---|---' + '\n')
 
             url_kattis_base = 'https://open.kattis.com/problems/'
             url_github_base = 'https://github.com/a-doering/kattis/tree/master/'
 
-            #for p_id in sorted(my_dict):# Sorted alphabetical by ID
+            #for p_id in sorted(my_dict):# Sorted alphabetically by ID
             # Sorted by problem difficulty
             for p_id in sorted(my_dict, key=lambda k: my_dict[k]['problem_difficulty']):
                 if my_dict[p_id]['exists']:
@@ -168,7 +172,7 @@ def create_readme(username=None, verbose=False):
 
         if unrecognised_problems:
         # Unrecognised problems
-            f.write('# Problems not recognised by name' + '\n')
+            f.write('## Problems not recognised by name' + '\n')
             f.write('Problem|Languages' + '\n')
             f.write('---|---' + '\n')
             for p_id in my_dict:
